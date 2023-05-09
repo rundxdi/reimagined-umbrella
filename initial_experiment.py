@@ -241,19 +241,20 @@ def gather_anti_symmetric_jacobian_coefs(
     return antiSymmetricErrorOutputs
 
 
-np.set_printoptions(precision=1, linewidth=1000)
-numQubits = 2
-pp1Q = Basis.cast("PP", dim=4)
-pp = Basis.cast("PP", dim=4**numQubits)
-pauliNames1Q = ["I", "X", "Y", "Z"]
-pauliStates1Q = ["X+", "X-", "Y+", "Y-", "Z+", "Z-"]
-# Temporary Hard Coding Error Gens to 1-, and 2-qubits
-if numQubits == 1:
-    pauliNames = pauliNames1Q
-    initialStates = pauliStates1Q
-elif numQubits == 2:
-    pauliNames = ["".join(name) for name in product(pauliNames1Q, pauliNames1Q)]
-    initialStates = [
-        ",".join((name))
-        for name in product(pauliStates1Q + ["I"], pauliStates1Q + ["I"])
-    ][:-1]
+if __name__ == "__main__":
+    np.set_printoptions(precision=1, linewidth=1000)
+    numQubits = 2
+    pp1Q = Basis.cast("PP", dim=4)
+    pp = Basis.cast("PP", dim=4**numQubits)
+    pauliNames1Q = ["I", "X", "Y", "Z"]
+    pauliStates1Q = ["X+", "X-", "Y+", "Y-", "Z+", "Z-"]
+    # Temporary Hard Coding Error Gens to 1-, and 2-qubits
+    if numQubits == 1:
+        pauliNames = pauliNames1Q
+        initialStates = pauliStates1Q
+    elif numQubits == 2:
+        pauliNames = ["".join(name) for name in product(pauliNames1Q, pauliNames1Q)]
+        initialStates = [
+            ",".join((name))
+            for name in product(pauliStates1Q + ["I"], pauliStates1Q + ["I"])
+        ][:-1]
