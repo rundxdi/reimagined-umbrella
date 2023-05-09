@@ -67,6 +67,180 @@ def convert_to_pauli(matrix, numQubits):
     return [(a, b) for (a, b) in zip(coefs, pauliNames) if abs(a) > 0.0001]
 
 
+# Compute the set of measurable effects of Hamiltonian error generators operating on two qubits in each of the specified eigenstates
+# Return: hamiltonian error and coef dictionary
+def gather_hamiltonian_jacobian_coefs(
+    pauliNames, initialStates, numQubits, printFlag=False
+):
+    hamiltonianIndices = pauliNames[1:]
+    hamiltonianErrorOutputs = dict()
+
+    for index in hamiltonianIndices:
+        for state in initialStates:
+            tempState = dict(enumerate(state.split(",")))
+            if numQubits == 2:
+                if tempState[0][-1] == "-":
+                    mat1 = -1 * pp1Q[tempState[0][0]]
+                elif tempState[0][-1] == "+":
+                    mat1 = pp1Q[tempState[0][0]]
+                else:
+                    mat1 == pp1Q["I"]
+                if tempState[1][-1] == "-":
+                    mat2 = -1 * pp1Q[tempState[1][0]]
+                elif tempState[1][-1] == "+":
+                    mat2 = pp1Q[tempState[1][0]]
+                else:
+                    mat2 == pp1Q["I"]
+                ident = pp["II"]
+
+                inputState = np.kron(mat1, mat2)
+                inputState = ident / 2 + inputState / 2
+                hamiltonianErrorOutputs[(index, state)] = hamiltonian_error_generator(
+                    inputState, pp[index], ident
+                )
+
+    for key in hamiltonianErrorOutputs:
+        hamiltonianErrorOutputs[key] = convert_to_pauli(
+            hamiltonianErrorOutputs[key], numQubits
+        )
+    if printFlag:
+        for key in hamiltonianErrorOutputs:
+            print(key, "\n", hamiltonianErrorOutputs[key])
+
+    return hamiltonianErrorOutputs
+
+
+# Compute the set of measurable effects of stochastic error generators operating on a single qubit in each of the specified eigenstates
+def gather_stochastic_jacobian_coefs(
+    pauliNames, initialStates, numQubits, printFlag=False
+):
+    stochasticIndices = pauliNames[1:]
+    stochasticErrorOutputs = dict()
+    for index in stochasticIndices:
+        for state in initialStates:
+            tempState = dict(enumerate(state.split(",")))
+            if numQubits == 2:
+                if tempState[0][-1] == "-":
+                    mat1 = -1 * pp1Q[tempState[0][0]]
+                elif tempState[0][-1] == "+":
+                    mat1 = pp1Q[tempState[0][0]]
+                else:
+                    mat1 == pp1Q["I"]
+                if tempState[1][-1] == "-":
+                    mat2 = -1 * pp1Q[tempState[1][0]]
+                elif tempState[1][-1] == "+":
+                    mat2 = pp1Q[tempState[1][0]]
+                else:
+                    mat2 == pp1Q["I"]
+                ident = pp["II"]
+
+                inputState = np.kron(mat1, mat2)
+                inputState = ident / 2 + inputState / 2
+                stochasticErrorOutputs[(index, state)] = stochastic_error_generator(
+                    inputState, pp[index], ident
+                )
+    # Convert measurable effects into coefficients
+    for key in stochasticErrorOutputs:
+        stochasticErrorOutputs[key] = convert_to_pauli(
+            stochasticErrorOutputs[key], numQubits
+        )
+    if printFlag:
+        for key in stochasticErrorOutputs:
+            print(key, "\n", stochasticErrorOutputs[key])
+
+    return stochasticErrorOutputs
+
+
+# Compute the set of measurable effects of pauli-correlation error generators operating on a single qubit in each of the specified eigenstates
+def gather_pauli_correlation_jacobian_coefs(
+    pauliNames, initialStates, numQubits, printFlag=False
+):
+    pauliCorrelationIndices = list(permutations(pauliNames[1:], 2))
+    pauliCorrelationErrorOutputs = dict()
+    for index in pauliCorrelationIndices:
+        for state in initialStates:
+            tempState = dict(enumerate(state.split(",")))
+            if numQubits == 2:
+                if tempState[0][-1] == "-":
+                    mat1 = -1 * pp1Q[tempState[0][0]]
+                elif tempState[0][-1] == "+":
+                    mat1 = pp1Q[tempState[0][0]]
+                else:
+                    mat1 == pp1Q["I"]
+                if tempState[1][-1] == "-":
+                    mat2 = -1 * pp1Q[tempState[1][0]]
+                elif tempState[1][-1] == "+":
+                    mat2 = pp1Q[tempState[1][0]]
+                else:
+                    mat2 == pp1Q["I"]
+                ident = pp["II"]
+
+                inputState = np.kron(mat1, mat2)
+                inputState = ident / 2 + inputState / 2
+                pauliCorrelationErrorOutputs[
+                    (index, state)
+                ] = pauli_correlation_error_generator(
+                    inputState, pp[index[0]], pp[index[1]]
+                )
+
+    # Convert measurable effects into coefficients
+    for key in pauliCorrelationErrorOutputs:
+        pauliCorrelationErrorOutputs[key] = convert_to_pauli(
+            pauliCorrelationErrorOutputs[key], numQubits
+        )
+
+    if printFlag:
+        for key in pauliCorrelationErrorOutputs:
+            print(key, "\n", pauliCorrelationErrorOutputs[key])
+
+    return pauliCorrelationErrorOutputs
+
+
+# Compute the set of measurable effects of pauli-correlation error generators operating on a single qubit in each of the specified eigenstates
+def gather_anti_symmetric_jacobian_coefs(
+    pauliNames, initialStates, numQubits, printFlag=False
+):
+    antiSymmetricIndices = list(permutations(pauliNames[1:], 2))
+    antiSymmetricErrorOutputs = dict()
+    for index in antiSymmetricIndices:
+        for state in initialStates:
+            tempState = dict(enumerate(state.split(",")))
+            if numQubits == 2:
+                if tempState[0][-1] == "-":
+                    mat1 = -1 * pp1Q[tempState[0][0]]
+                elif tempState[0][-1] == "+":
+                    mat1 = pp1Q[tempState[0][0]]
+                else:
+                    mat1 == pp1Q["I"]
+                if tempState[1][-1] == "-":
+                    mat2 = -1 * pp1Q[tempState[1][0]]
+                elif tempState[1][-1] == "+":
+                    mat2 = pp1Q[tempState[1][0]]
+                else:
+                    mat2 == pp1Q["I"]
+                ident = pp["II"]
+
+                inputState = np.kron(mat1, mat2)
+                inputState = ident / 2 + inputState / 2
+                antiSymmetricErrorOutputs[
+                    (index, state)
+                ] = anti_symmetric_error_generator(
+                    inputState, pp[index[0]], pp[index[1]]
+                )
+
+    # Convert measurable effects into coefficients
+    for key in antiSymmetricErrorOutputs:
+        antiSymmetricErrorOutputs[key] = convert_to_pauli(
+            antiSymmetricErrorOutputs[key], numQubits
+        )
+
+    if printFlag:
+        for key in antiSymmetricErrorOutputs:
+            print(key, "\n", antiSymmetricErrorOutputs[key])
+
+    return antiSymmetricErrorOutputs
+
+
 np.set_printoptions(precision=1, linewidth=1000)
 numQubits = 2
 pp1Q = Basis.cast("PP", dim=4)
@@ -83,150 +257,3 @@ elif numQubits == 2:
         ",".join((name))
         for name in product(pauliStates1Q + ["I"], pauliStates1Q + ["I"])
     ][:-1]
-
-
-# Compute the set of measurable effects of Hamiltonian error generators operating on two qubits in each of the specified eigenstates
-hamiltonianIndices = pauliNames[1:]
-hamiltonianErrorOutputs = dict()
-
-for index in hamiltonianIndices:
-    for state in initialStates:
-        tempState = dict(enumerate(state.split(",")))
-        if numQubits == 2:
-            if tempState[0][-1] == "-":
-                mat1 = -1 * pp1Q[tempState[0][0]]
-            elif tempState[0][-1] == "+":
-                mat1 = pp1Q[tempState[0][0]]
-            else:
-                mat1 == pp1Q["I"]
-            if tempState[1][-1] == "-":
-                mat2 = -1 * pp1Q[tempState[1][0]]
-            elif tempState[1][-1] == "+":
-                mat2 = pp1Q[tempState[1][0]]
-            else:
-                mat2 == pp1Q["I"]
-            ident = pp["II"]
-
-            inputState = np.kron(mat1, mat2)
-            inputState = ident / 2 + inputState / 2
-            hamiltonianErrorOutputs[(index, state)] = hamiltonian_error_generator(
-                inputState, pp[index], ident
-            )
-
-for key in hamiltonianErrorOutputs:
-    hamiltonianErrorOutputs[key] = convert_to_pauli(
-        hamiltonianErrorOutputs[key], numQubits
-    )
-
-for key in hamiltonianErrorOutputs:
-    print(key, "\n", hamiltonianErrorOutputs[key])
-
-
-# Compute the set of measurable effects of stochastic error generators operating on a single qubit in each of the specified eigenstates
-stochasticIndices = hamiltonianIndices
-stochasticErrorOutputs = dict()
-for index in stochasticIndices:
-    for state in initialStates:
-        tempState = dict(enumerate(state.split(",")))
-        if numQubits == 2:
-            if tempState[0][-1] == "-":
-                mat1 = -1 * pp1Q[tempState[0][0]]
-            elif tempState[0][-1] == "+":
-                mat1 = pp1Q[tempState[0][0]]
-            else:
-                mat1 == pp1Q["I"]
-            if tempState[1][-1] == "-":
-                mat2 = -1 * pp1Q[tempState[1][0]]
-            elif tempState[1][-1] == "+":
-                mat2 = pp1Q[tempState[1][0]]
-            else:
-                mat2 == pp1Q["I"]
-            ident = pp["II"]
-
-            inputState = np.kron(mat1, mat2)
-            inputState = ident / 2 + inputState / 2
-            stochasticErrorOutputs[(index, state)] = stochastic_error_generator(
-                inputState, pp[index], ident
-            )
-# Convert measurable effects into coefficients
-for key in stochasticErrorOutputs:
-    stochasticErrorOutputs[key] = convert_to_pauli(
-        stochasticErrorOutputs[key], numQubits
-    )
-for key in stochasticErrorOutputs:
-    print(key, "\n", stochasticErrorOutputs[key])
-
-
-# Compute the set of measurable effects of pauli-correlation error generators operating on a single qubit in each of the specified eigenstates
-pauliCorrelationIndices = list(permutations(pauliNames[1:], 2))
-pauliCorrelationErrorOutputs = dict()
-for index in pauliCorrelationIndices:
-    for state in initialStates:
-        tempState = dict(enumerate(state.split(",")))
-        if numQubits == 2:
-            if tempState[0][-1] == "-":
-                mat1 = -1 * pp1Q[tempState[0][0]]
-            elif tempState[0][-1] == "+":
-                mat1 = pp1Q[tempState[0][0]]
-            else:
-                mat1 == pp1Q["I"]
-            if tempState[1][-1] == "-":
-                mat2 = -1 * pp1Q[tempState[1][0]]
-            elif tempState[1][-1] == "+":
-                mat2 = pp1Q[tempState[1][0]]
-            else:
-                mat2 == pp1Q["I"]
-            ident = pp["II"]
-
-            inputState = np.kron(mat1, mat2)
-            inputState = ident / 2 + inputState / 2
-            pauliCorrelationErrorOutputs[
-                (index, state)
-            ] = pauli_correlation_error_generator(
-                inputState, pp[index[0]], pp[index[1]]
-            )
-
-# Convert measurable effects into coefficients
-for key in pauliCorrelationErrorOutputs:
-    pauliCorrelationErrorOutputs[key] = convert_to_pauli(
-        pauliCorrelationErrorOutputs[key], numQubits
-    )
-for key in pauliCorrelationErrorOutputs:
-    print(key, "\n", pauliCorrelationErrorOutputs[key])
-
-
-# Compute the set of measurable effects of pauli-correlation error generators operating on a single qubit in each of the specified eigenstates
-antiSymmetricIndices = pauliCorrelationIndices
-antiSymmetricErrorOutputs = dict()
-for index in antiSymmetricIndices:
-    for state in initialStates:
-        tempState = dict(enumerate(state.split(",")))
-        if numQubits == 2:
-            if tempState[0][-1] == "-":
-                mat1 = -1 * pp1Q[tempState[0][0]]
-            elif tempState[0][-1] == "+":
-                mat1 = pp1Q[tempState[0][0]]
-            else:
-                mat1 == pp1Q["I"]
-            if tempState[1][-1] == "-":
-                mat2 = -1 * pp1Q[tempState[1][0]]
-            elif tempState[1][-1] == "+":
-                mat2 = pp1Q[tempState[1][0]]
-            else:
-                mat2 == pp1Q["I"]
-            ident = pp["II"]
-
-            inputState = np.kron(mat1, mat2)
-            inputState = ident / 2 + inputState / 2
-            antiSymmetricErrorOutputs[(index, state)] = anti_symmetric_error_generator(
-                inputState, pp[index[0]], pp[index[1]]
-            )
-
-# Convert measurable effects into coefficients
-for key in antiSymmetricErrorOutputs:
-    antiSymmetricErrorOutputs[key] = convert_to_pauli(
-        antiSymmetricErrorOutputs[key], numQubits
-    )
-for key in antiSymmetricErrorOutputs:
-    print(key, "\n", antiSymmetricErrorOutputs[key])
-import sys
