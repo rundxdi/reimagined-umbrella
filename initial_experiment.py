@@ -433,18 +433,18 @@ if __name__ == "__main__":
     print(blah)
 
     # FULLY TEMPORARY OH LAWD
-    untested = [2, 4, 5, 6, 7, 11, 13, 14, 15]
-    full_jacobian = np.delete(full_jacobian, untested, 0)
-    print(full_jacobian)
-    print(full_jacobian.shape)
-    inverse_jacobian = np.linalg.pinv(full_jacobian)
-    print(inverse_jacobian)
-    print(inverse_jacobian.shape)
-    blah["rows"] = dict(
-        enumerate(k for k, v in blah["rows"].items() if v not in untested)
-    )
-    blah["rows"] = {v: k for k, v in blah["rows"].items()}
-    print(blah)
+    # untested = [2, 4, 5, 6, 7, 11, 13, 14, 15]
+    # full_jacobian = np.delete(full_jacobian, untested, 0)
+    # print(full_jacobian)
+    # print(full_jacobian.shape)
+    # inverse_jacobian = np.linalg.pinv(full_jacobian)
+    # print(inverse_jacobian)
+    # print(inverse_jacobian.shape)
+    # blah["rows"] = dict(
+    #    enumerate(k for k, v in blah["rows"].items() if v not in untested)
+    # )
+    # blah["rows"] = {v: k for k, v in blah["rows"].items()}
+    # print(blah)
 
     # ok right here just C&P idle tomography from before.  testing at 1 qubit for 1-q error gens
 
@@ -460,8 +460,32 @@ if __name__ == "__main__":
 
     mdl_target = pygsti.models.create_crosstalk_free_model(pspec)
     paulidicts = idt.determine_paulidicts(mdl_target)
+    # print(paulidicts)
+    # sys.exit()
+    from pygsti.extras.idletomography.pauliobjs import NQPauliState
+
+    ugh = [
+        (NQPauliState("X", (1,)), NQPauliState("X", (1,))),
+        (NQPauliState("X", (-1,)), NQPauliState("X", (1,))),
+        (NQPauliState("Y", (1,)), NQPauliState("Y", (1,))),
+        (NQPauliState("Y", (-1,)), NQPauliState("Y", (1,))),
+        (NQPauliState("Z", (1,)), NQPauliState("Z", (1,))),
+        (NQPauliState("Z", (-1,)), NQPauliState("Z", (1,))),
+        (NQPauliState("X", (1,)), NQPauliState("Y", (1,))),
+        (NQPauliState("X", (-1,)), NQPauliState("Y", (1,))),
+        (NQPauliState("X", (1,)), NQPauliState("Z", (1,))),
+        (NQPauliState("X", (-1,)), NQPauliState("Z", (1,))),
+        (NQPauliState("Y", (1,)), NQPauliState("X", (1,))),
+        (NQPauliState("Y", (-1,)), NQPauliState("X", (1,))),
+        (NQPauliState("Y", (1,)), NQPauliState("Z", (1,))),
+        (NQPauliState("Y", (-1,)), NQPauliState("Z", (1,))),
+        (NQPauliState("Z", (1,)), NQPauliState("X", (1,))),
+        (NQPauliState("Z", (-1,)), NQPauliState("X", (1,))),
+        (NQPauliState("Z", (1,)), NQPauliState("Y", (1,))),
+        (NQPauliState("Z", (-1,)), NQPauliState("Y", (1,))),
+    ]
     idle_experiments = idt.make_idle_tomography_list(
-        n_qubits, max_lengths, paulidicts, maxweight=1
+        n_qubits, max_lengths, paulidicts, maxweight=1, force_fid_pairs=ugh
     )
     print(len(idle_experiments), "idle tomography experiments for %d qubits" % n_qubits)
     from pygsti.baseobjs import Label
@@ -477,14 +501,42 @@ if __name__ == "__main__":
         pspec, lindblad_error_coeffs={"Gi": {"HX": 0.01, "SX": 0.01}}
     )
     # Error models! Random with right CP constraints from Taxonomy paper
-    ds = pygsti.data.simulate_data(mdl_datagen, updated_ckt_list, 100000, seed=8675309)
+    ds = pygsti.data.simulate_data(
+        mdl_datagen,
+        updated_ckt_list,
+        1000000,
+        seed=8675309,
+        sample_error="none",
+    )
+    from pygsti.io import write_dataset
+
+    write_dataset("../problemdataset.txt", ds)
 
     # hardcode pauli fidpairs!?!?
     from pygsti.extras.idletomography.pauliobjs import NQPauliState
 
-    # oh_lawd = [(NQPauliState("X"), NQPauliState("X"))]
+    oh_lawd = [(NQPauliState("X"), NQPauliState("X"))]
     # "pauli_fidpairs":oh_lawd
-    huh = [(NQPauliState("X", (1,)), NQPauliState("X", (0,)))]
+    huh = [
+        (NQPauliState("X", (1,)), NQPauliState("X", (1,))),
+        (NQPauliState("X", (-1,)), NQPauliState("X", (1,))),
+        (NQPauliState("Y", (1,)), NQPauliState("Y", (1,))),
+        (NQPauliState("Y", (-1,)), NQPauliState("Y", (1,))),
+        (NQPauliState("Z", (1,)), NQPauliState("Z", (1,))),
+        (NQPauliState("Z", (-1,)), NQPauliState("Z", (1,))),
+        (NQPauliState("X", (1,)), NQPauliState("Y", (1,))),
+        (NQPauliState("X", (-1,)), NQPauliState("Y", (1,))),
+        (NQPauliState("X", (1,)), NQPauliState("Z", (1,))),
+        (NQPauliState("X", (-1,)), NQPauliState("Z", (1,))),
+        (NQPauliState("Y", (1,)), NQPauliState("X", (1,))),
+        (NQPauliState("Y", (-1,)), NQPauliState("X", (1,))),
+        (NQPauliState("Y", (1,)), NQPauliState("Z", (1,))),
+        (NQPauliState("Y", (-1,)), NQPauliState("Z", (1,))),
+        (NQPauliState("Z", (1,)), NQPauliState("X", (1,))),
+        (NQPauliState("Z", (-1,)), NQPauliState("X", (1,))),
+        (NQPauliState("Z", (1,)), NQPauliState("Y", (1,))),
+        (NQPauliState("Z", (-1,)), NQPauliState("Y", (1,))),
+    ]
 
     results = idt.do_idle_tomography(
         n_qubits,
@@ -492,17 +544,26 @@ if __name__ == "__main__":
         max_lengths,
         paulidicts,
         maxweight=1,
-        advanced_options={"jacobian mode": "together"},
+        advanced_options={"jacobian mode": "together", "pauli_fidpairs": huh},
         idle_string="Gi:0",
     )
 
+    print(len(results.pauli_fidpairs["samebasis"]))
+    print(len(results.pauli_fidpairs["diffbasis"]))
+    print(results.pauli_fidpairs["diffbasis"])
+
     ## TODO: THIS IS SO MANUAL AND SO DUMB AND I HATE IT
+    # ok just match this up to the right order, and ...
     silly_error_dict = dict()
     for i in range(len(results.pauli_fidpairs["diffbasis"])):
+        print(i)
+        print(results.observed_rate_infos["diffbasis"][i].keys())
         for key in results.observed_rate_infos["diffbasis"][i].keys():
+            repr(results.pauli_fidpairs["diffbasis"][i])
             silly_error_dict[
                 repr(results.pauli_fidpairs["diffbasis"][i])
             ] = results.observed_rate_infos["diffbasis"][i][key]["rate"]
+    print(len(silly_error_dict))
     for i in range(len(results.pauli_fidpairs["samebasis"])):
         for key in results.observed_rate_infos["samebasis"][i].keys():
             silly_error_dict[
@@ -510,19 +571,20 @@ if __name__ == "__main__":
             ] = results.observed_rate_infos["samebasis"][i][key]["rate"]
     error_rates = [v for v in silly_error_dict.values()]
     print(silly_error_dict)
+    print(len(silly_error_dict))
     print(error_rates)
-    ordered_error_rates = [0] * len(error_rates)
-    ## TODO: HOLY BAD BATMAN
-    ordered_error_rates[0] = error_rates[3]
-    ordered_error_rates[1] = error_rates[6]
-    ordered_error_rates[2] = error_rates[2]
-    ordered_error_rates[3] = error_rates[7]
-    ordered_error_rates[4] = error_rates[4]
-    ordered_error_rates[5] = error_rates[0]
-    ordered_error_rates[6] = error_rates[1]
-    ordered_error_rates[7] = error_rates[5]
-    ordered_error_rates[8] = error_rates[8]
-    print(inverse_jacobian @ ordered_error_rates)
+    print(len(error_rates))
+    print(inverse_jacobian @ error_rates)
 
+    # ws = pygsti.report.Workspace()
+    # ws.init_notebook_mode(autodisplay=True)
+    # ws.IdleTomographyIntrinsicErrorsTable(results)
+    # ws.IdleTomographyObservedRatesTable(results, threshold=0.01)
+    # idt.create_idletomography_report(
+    #    results,
+    #    "../IDTTestReport",
+    #    "Test idle tomography example report",
+    #    auto_open=True,
+    # )
 ##### For Corey/Kenny/Robin 5/11:
 ##### 1) Help putting together paper draft!  Divide and conquer?  I will definitely work on results/conclusions and some of methodology?
