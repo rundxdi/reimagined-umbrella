@@ -366,6 +366,39 @@ def build_class_jacobian(classification, numQubits):
     return jacobian
 
 
+def jacobian_index_label(numQubits):
+    index_labels = {"rows": {}, "columns": {}}
+    if numQubits == 1:
+        pauliNames = pauliNames1Q
+        initialStates = pauliStates1Q
+    elif numQubits == 2:
+        pauliNames = ["".join(name) for name in product(pauliNames1Q, pauliNames1Q)]
+        initialStates = [
+            ",".join((name))
+            for name in product(pauliStates1Q + ["I"], pauliStates1Q + ["I"])
+        ][:-1]
+    extrinsicErrorList = dict(enumerate(product(pauliNames[1:], initialStates)))
+    extrinsicErrorList = {v: k for k, v in extrinsicErrorList.items()}
+    index_labels["rows"] = extrinsicErrorList
+    index_register = 0
+    pauliIndexList = dict(enumerate(pauliNames[1:]))
+    pauliIndexList = {v: k for k, v in pauliIndexList.items()}
+    for k, v in pauliIndexList.items():
+        index_labels["columns"][("H", k)] = v
+    index_register = len(index_labels["columns"])
+    for k, v in pauliIndexList.items():
+        index_labels["columns"][("S", k)] = v + index_register
+    index_register = len(index_labels["columns"])
+    pauliIndexList = dict(enumerate(permutations(pauliNames[1:], 2)))
+    pauliIndexList = {v: k for k, v in pauliIndexList.items()}
+    for k, v in pauliIndexList.items():
+        index_labels["columns"][("C", k)] = v + index_register
+    index_register = len(index_labels["columns"])
+    for k, v in pauliIndexList.items():
+        index_labels["columns"][("A", k)] = v + index_register
+    return index_labels
+
+
 if __name__ == "__main__":
     np.set_printoptions(precision=1, linewidth=1000)
     pp1Q = Basis.cast("PP", dim=4)
@@ -396,9 +429,100 @@ if __name__ == "__main__":
     inverse_jacobian = np.linalg.pinv(full_jacobian)
     print(inverse_jacobian)
 
+    blah = jacobian_index_label(1)
+    print(blah)
+
+    # FULLY TEMPORARY OH LAWD
+    untested = [2, 4, 5, 6, 7, 11, 13, 14, 15]
+    full_jacobian = np.delete(full_jacobian, untested, 0)
+    print(full_jacobian)
+    print(full_jacobian.shape)
+    inverse_jacobian = np.linalg.pinv(full_jacobian)
+    print(inverse_jacobian)
+    print(inverse_jacobian.shape)
+    blah["rows"] = dict(
+        enumerate(k for k, v in blah["rows"].items() if v not in untested)
+    )
+    blah["rows"] = {v: k for k, v in blah["rows"].items()}
+    print(blah)
+
+    # ok right here just C&P idle tomography from before.  testing at 1 qubit for 1-q error gens
+
+    import pygsti
+    from pygsti.extras import idletomography as idt
+
+    n_qubits = 1
+    gates = ["Gi", "Gx", "Gy", "Gcnot"]
+    max_lengths = [1, 2, 4, 8]
+    pspec = pygsti.processors.QubitProcessorSpec(
+        n_qubits, gates, geometry="line", nonstd_gate_unitaries={(): 1}
+    )
+
+    mdl_target = pygsti.models.create_crosstalk_free_model(pspec)
+    paulidicts = idt.determine_paulidicts(mdl_target)
+    idle_experiments = idt.make_idle_tomography_list(
+        n_qubits, max_lengths, paulidicts, maxweight=1
+    )
+    print(len(idle_experiments), "idle tomography experiments for %d qubits" % n_qubits)
+    from pygsti.baseobjs import Label
+
+    updated_ckt_list = []
+    for ckt in idle_experiments:
+        new_ckt = ckt.copy(editable=True)
+        for i, lbl in enumerate(ckt):
+            if lbl == Label(()):
+                new_ckt[i] = Label(("Gi", 0))
+        updated_ckt_list.append(new_ckt)
+    mdl_datagen = pygsti.models.create_crosstalk_free_model(
+        pspec, lindblad_error_coeffs={"Gi": {"HX": 0.01, "SX": 0.01}}
+    )
+    # Error models! Random with right CP constraints from Taxonomy paper
+    ds = pygsti.data.simulate_data(mdl_datagen, updated_ckt_list, 100000, seed=8675309)
+
+    # hardcode pauli fidpairs!?!?
+    from pygsti.extras.idletomography.pauliobjs import NQPauliState
+
+    # oh_lawd = [(NQPauliState("X"), NQPauliState("X"))]
+    # "pauli_fidpairs":oh_lawd
+    huh = [(NQPauliState("X", (1,)), NQPauliState("X", (0,)))]
+
+    results = idt.do_idle_tomography(
+        n_qubits,
+        ds,
+        max_lengths,
+        paulidicts,
+        maxweight=1,
+        advanced_options={"jacobian mode": "together"},
+        idle_string="Gi:0",
+    )
+
+    ## TODO: THIS IS SO MANUAL AND SO DUMB AND I HATE IT
+    silly_error_dict = dict()
+    for i in range(len(results.pauli_fidpairs["diffbasis"])):
+        for key in results.observed_rate_infos["diffbasis"][i].keys():
+            silly_error_dict[
+                repr(results.pauli_fidpairs["diffbasis"][i])
+            ] = results.observed_rate_infos["diffbasis"][i][key]["rate"]
+    for i in range(len(results.pauli_fidpairs["samebasis"])):
+        for key in results.observed_rate_infos["samebasis"][i].keys():
+            silly_error_dict[
+                repr(results.pauli_fidpairs["samebasis"][i])
+            ] = results.observed_rate_infos["samebasis"][i][key]["rate"]
+    error_rates = [v for v in silly_error_dict.values()]
+    print(silly_error_dict)
+    print(error_rates)
+    ordered_error_rates = [0] * len(error_rates)
+    ## TODO: HOLY BAD BATMAN
+    ordered_error_rates[0] = error_rates[3]
+    ordered_error_rates[1] = error_rates[6]
+    ordered_error_rates[2] = error_rates[2]
+    ordered_error_rates[3] = error_rates[7]
+    ordered_error_rates[4] = error_rates[4]
+    ordered_error_rates[5] = error_rates[0]
+    ordered_error_rates[6] = error_rates[1]
+    ordered_error_rates[7] = error_rates[5]
+    ordered_error_rates[8] = error_rates[8]
+    print(inverse_jacobian @ ordered_error_rates)
 
 ##### For Corey/Kenny/Robin 5/11:
 ##### 1) Help putting together paper draft!  Divide and conquer?  I will definitely work on results/conclusions and some of methodology?
-
-
-# ok time to do bad things
