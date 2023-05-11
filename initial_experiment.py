@@ -432,22 +432,6 @@ if __name__ == "__main__":
     blah = jacobian_index_label(1)
     print(blah)
 
-    # FULLY TEMPORARY OH LAWD
-    # untested = [2, 4, 5, 6, 7, 11, 13, 14, 15]
-    # full_jacobian = np.delete(full_jacobian, untested, 0)
-    # print(full_jacobian)
-    # print(full_jacobian.shape)
-    # inverse_jacobian = np.linalg.pinv(full_jacobian)
-    # print(inverse_jacobian)
-    # print(inverse_jacobian.shape)
-    # blah["rows"] = dict(
-    #    enumerate(k for k, v in blah["rows"].items() if v not in untested)
-    # )
-    # blah["rows"] = {v: k for k, v in blah["rows"].items()}
-    # print(blah)
-
-    # ok right here just C&P idle tomography from before.  testing at 1 qubit for 1-q error gens
-
     import pygsti
     from pygsti.extras import idletomography as idt
 
@@ -510,7 +494,7 @@ if __name__ == "__main__":
     )
     from pygsti.io import write_dataset
 
-    write_dataset("../problemdataset.txt", ds)
+    #write_dataset("../problemdataset.txt", ds)
 
     # hardcode pauli fidpairs!?!?
     from pygsti.extras.idletomography.pauliobjs import NQPauliState
@@ -569,17 +553,23 @@ if __name__ == "__main__":
             silly_error_dict[
                 repr(results.pauli_fidpairs["samebasis"][i])
             ] = results.observed_rate_infos["samebasis"][i][key]["rate"]
-    error_rates = [v for v in silly_error_dict.values()]
+    import re
+    def match_error_indices(idt_error_dict, jacobian_index_dict):
+        matching = dict()
+        for key in idt_error_dict.keys():
+            matched_key = re.split(r'\[|\]', key)
+            matched_key = (matched_key[3].lstrip('+').lstrip('-'), matched_key[1][::-1])
+            matching[key] = matched_key
+        return matching
+    
+    matching_dict = match_error_indices(silly_error_dict, blah)
+    errors = [0]*len(blah['rows'])
+    for k,v in silly_error_dict.items():
+        errors[blah['rows'][matching_dict[k]]] = v
     print(silly_error_dict)
-    print(len(silly_error_dict))
-    print(error_rates)
-    print(len(error_rates))
-    print(inverse_jacobian @ error_rates)
+    print(errors)
+    print(inverse_jacobian @ errors)
 
-    # ws = pygsti.report.Workspace()
-    # ws.init_notebook_mode(autodisplay=True)
-    # ws.IdleTomographyIntrinsicErrorsTable(results)
-    # ws.IdleTomographyObservedRatesTable(results, threshold=0.01)
     # idt.create_idletomography_report(
     #    results,
     #    "../IDTTestReport",
