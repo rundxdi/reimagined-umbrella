@@ -570,7 +570,19 @@ if __name__ == "__main__":
         errors[blah["rows"][matching_dict[k]]] = v
     print(silly_error_dict)
     print(errors)
-    print(inverse_jacobian @ errors)
+    print("#########################################################")
+    print("#########################################################")
+    print("###### | this is the HX error rate which should be 0.01 #")
+    print("###### | ################################################")
+    print("###### V ################################################")
+    print()
+    print((inverse_jacobian @ errors)[0])
+    print()
+    print("###### ^ ################################################")
+    print("###### | ################################################")
+    print("###### | this is the HX error rate which should be 0.01 #")
+    print("#########################################################")
+    print("#########################################################")
 
     # idt.create_idletomography_report(
     #    results,
