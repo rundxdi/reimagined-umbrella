@@ -482,19 +482,19 @@ if __name__ == "__main__":
                 new_ckt[i] = Label(("Gi", 0))
         updated_ckt_list.append(new_ckt)
     mdl_datagen = pygsti.models.create_crosstalk_free_model(
-        pspec, lindblad_error_coeffs={"Gi": {"HX": 0.01, "SX": 0.01}}
+        pspec, lindblad_error_coeffs={"Gi": {"HX": 0.01}}
     )
     # Error models! Random with right CP constraints from Taxonomy paper
     ds = pygsti.data.simulate_data(
         mdl_datagen,
         updated_ckt_list,
-        1000000,
+        100000,
         seed=8675309,
         sample_error="none",
     )
     from pygsti.io import write_dataset
 
-    #write_dataset("../problemdataset.txt", ds)
+    write_dataset("../problemdataset.txt", ds)
 
     # hardcode pauli fidpairs!?!?
     from pygsti.extras.idletomography.pauliobjs import NQPauliState
@@ -535,6 +535,7 @@ if __name__ == "__main__":
     print(len(results.pauli_fidpairs["samebasis"]))
     print(len(results.pauli_fidpairs["diffbasis"]))
     print(results.pauli_fidpairs["diffbasis"])
+    print(results.observed_rate_infos["diffbasis"][0])
 
     ## TODO: THIS IS SO MANUAL AND SO DUMB AND I HATE IT
     # ok just match this up to the right order, and ...
@@ -554,18 +555,19 @@ if __name__ == "__main__":
                 repr(results.pauli_fidpairs["samebasis"][i])
             ] = results.observed_rate_infos["samebasis"][i][key]["rate"]
     import re
+
     def match_error_indices(idt_error_dict, jacobian_index_dict):
         matching = dict()
         for key in idt_error_dict.keys():
-            matched_key = re.split(r'\[|\]', key)
-            matched_key = (matched_key[3].lstrip('+').lstrip('-'), matched_key[1][::-1])
+            matched_key = re.split(r"\[|\]", key)
+            matched_key = (matched_key[3].lstrip("+").lstrip("-"), matched_key[1][::-1])
             matching[key] = matched_key
         return matching
-    
+
     matching_dict = match_error_indices(silly_error_dict, blah)
-    errors = [0]*len(blah['rows'])
-    for k,v in silly_error_dict.items():
-        errors[blah['rows'][matching_dict[k]]] = v
+    errors = [0] * len(blah["rows"])
+    for k, v in silly_error_dict.items():
+        errors[blah["rows"][matching_dict[k]]] = v
     print(silly_error_dict)
     print(errors)
     print(inverse_jacobian @ errors)
