@@ -409,6 +409,7 @@ if __name__ == "__main__":
     # Temporary Hard Coding Error Gens to 1-, and 2-qubits
 
     hamiltonian_jacobian = build_class_jacobian("H", 1)
+    # hamiltonian_jacobian = 2 * hamiltonian_jacobian
     print(hamiltonian_jacobian)
     stochastic_jacobian = build_class_jacobian("S", 1)
     print(stochastic_jacobian)
@@ -494,7 +495,7 @@ if __name__ == "__main__":
     )
     from pygsti.io import write_dataset
 
-    write_dataset("../problemdataset.txt", ds)
+    write_dataset("C:/Users/jkskolf/reimagined-umbrella/problemdataset.txt", ds)
 
     # hardcode pauli fidpairs!?!?
     from pygsti.extras.idletomography.pauliobjs import NQPauliState
@@ -531,6 +532,13 @@ if __name__ == "__main__":
         advanced_options={"jacobian mode": "together", "pauli_fidpairs": huh},
         idle_string="Gi:0",
     )
+
+    # idt.create_idletomography_report(
+    #    results,
+    #    "../IDTTestReport",
+    #    "Test idle tomography example report",
+    #    auto_open=True,
+    # )
 
     print(len(results.pauli_fidpairs["samebasis"]))
     print(len(results.pauli_fidpairs["diffbasis"]))
