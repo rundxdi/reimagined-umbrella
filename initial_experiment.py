@@ -12,9 +12,10 @@ def anti_commute(mat1, mat2):
     return mat1 @ mat2 - mat2 @ mat1
 
 
+# 2 * this???????????
 # Hamiltonian Error Generator
 def hamiltonian_error_generator(initial_state, indexed_pauli, identity):
-    return (
+    return 2 * (
         -1j * indexed_pauli @ initial_state @ identity
         + 1j * identity @ initial_state @ indexed_pauli
     )
@@ -22,7 +23,7 @@ def hamiltonian_error_generator(initial_state, indexed_pauli, identity):
 
 # Stochastic Error Generator
 def stochastic_error_generator(initial_state, indexed_pauli, identity):
-    return (
+    return 2 * (
         indexed_pauli @ initial_state @ indexed_pauli
         - identity @ initial_state @ identity
     )
@@ -34,7 +35,7 @@ def pauli_correlation_error_generator(
     pauli_index_1,
     pauli_index_2,
 ):
-    return (
+    return 2 * (
         pauli_index_1 @ initial_state @ pauli_index_2
         + pauli_index_2 @ initial_state @ pauli_index_1
         - 0.5 * commute(commute(pauli_index_1, pauli_index_2), initial_state)
@@ -43,7 +44,7 @@ def pauli_correlation_error_generator(
 
 # Anti-symmetric Error Generator
 def anti_symmetric_error_generator(initial_state, pauli_index_1, pauli_index_2):
-    return 1j * (
+    return 2j * (
         pauli_index_1 @ initial_state @ pauli_index_2
         - pauli_index_2 @ initial_state @ pauli_index_1
         + 0.5
@@ -378,7 +379,7 @@ def jacobian_index_label(numQubits):
             for name in product(pauliStates1Q + ["I"], pauliStates1Q + ["I"])
         ][:-1]
     extrinsicErrorList = dict(enumerate(product(pauliNames[1:], initialStates)))
-    extrinsicErrorList = {v: k for k, v in extrinsicErrorList.items()}
+    extrinsicErrorList = {(v[1], v[0]): k for k, v in extrinsicErrorList.items()}
     index_labels["rows"] = extrinsicErrorList
     index_register = 0
     pauliIndexList = dict(enumerate(pauliNames[1:]))
@@ -399,8 +400,58 @@ def jacobian_index_label(numQubits):
     return index_labels
 
 
+def fit_observed_error_rates(ds, error_order, max_lengths):
+    # correcting for +1/+2 in nom/denom for 0 division causes problems
+    observed_error_rates = dict()
+    # print(ds)
+    ds_errors = [list(val._get_counts().values()) for val in ds.values()]
+    # print(ds_errors)
+    start_idx = 0
+    for error_id in error_order:
+        end_idx = start_idx + len(max_lengths)
+        zero_counts = [ds_errors[i][0] for i in range(start_idx, end_idx)]
+        one_counts = [ds_errors[i][1] for i in range(start_idx, end_idx)]
+        # checks if pauli fid pairs are matching (i.e., X/X or X-/X)
+        # if error_id[0].rep == error_id[1].rep:
+        if False:
+            data_to_fit = [
+                (zero_counts[i]) / (zero_counts[i] + one_counts[i])
+                for i in range(len(zero_counts))
+            ]
+            data_for_wts = [
+                (zero_counts[i] + 1) / (zero_counts[i] + one_counts[i] + 2)
+                for i in range(len(zero_counts))
+            ]
+            # print("matching basis ", data_to_fit)
+        else:
+            data_to_fit = [
+                (zero_counts[i] - one_counts[i]) / (zero_counts[i] + one_counts[i])
+                for i in range(len(zero_counts))
+            ]
+            data_for_wts = [
+                0.5
+                + 0.5
+                * (zero_counts[i] - one_counts[i] + 1)
+                / (zero_counts[i] + one_counts[i] + 2)
+                for i in range(len(zero_counts))
+            ]
+            # print("unmatching basis", data_to_fit)
+        wts = [
+            np.sqrt(
+                ((zero_counts[i] + one_counts[i]))
+                / abs(data_for_wts[i] * (1 - data_for_wts[i]))
+            )
+            for i in range(len(zero_counts))
+        ]
+        observed_error_rates[(str(error_id[0]), error_id[1].rep)] = np.polyfit(
+            max_lengths, data_to_fit, 1, w=wts
+        )[0]
+        start_idx = end_idx
+    return observed_error_rates
+
+
 if __name__ == "__main__":
-    np.set_printoptions(precision=1, linewidth=1000)
+    np.set_printoptions(precision=4, linewidth=1000, suppress=True)
     pp1Q = Basis.cast("PP", dim=4)
     # hard forcing 2 qubits currently
     pp = Basis.cast("PP", dim=16)
@@ -449,6 +500,8 @@ if __name__ == "__main__":
     # sys.exit()
     from pygsti.extras.idletomography.pauliobjs import NQPauliState
 
+    # build_pauli_fid_pairs()
+
     ugh = [
         (NQPauliState("X", (1,)), NQPauliState("X", (1,))),
         (NQPauliState("X", (-1,)), NQPauliState("X", (1,))),
@@ -483,7 +536,7 @@ if __name__ == "__main__":
                 new_ckt[i] = Label(("Gi", 0))
         updated_ckt_list.append(new_ckt)
     mdl_datagen = pygsti.models.create_crosstalk_free_model(
-        pspec, lindblad_error_coeffs={"Gi": {"HX": 0.01}}
+        pspec, lindblad_error_coeffs={"Gi": {"SX": 0.01}}
     )
     # Error models! Random with right CP constraints from Taxonomy paper
     ds = pygsti.data.simulate_data(
@@ -493,6 +546,45 @@ if __name__ == "__main__":
         seed=8675309,
         sample_error="none",
     )
+
+    observed_error_rates = fit_observed_error_rates(ds, ugh, max_lengths)
+    print(observed_error_rates)
+    # match observed error rate order to fixed jacobian order
+    matched_error_rates = []
+    # HEY THIS ONLY WORKS FOR 1Q PAULIS NEBSsasd
+    for row in blah["rows"]:
+        print(row)
+        matched_error_rates.append(observed_error_rates[(row[0][::-1], row[1])])
+    print(matched_error_rates)
+    error_keys = [
+        "H_X",
+        "H_Y",
+        "H_Z",
+        "S_X",
+        "S_Y",
+        "S_Z",
+        "C_{X,Y}",
+        "C_{X,Z}",
+        "C_{Y,X}",
+        "C_{Y,Z}",
+        "C_{Z,X}",
+        "C_{Z,Y}",
+        "A_{X,Y}",
+        "A_{X,Z}",
+        "A_{Y,X}",
+        "A_{Y,Z}",
+        "A_{Z,X}",
+        "A_{Z,Y}}",
+    ]
+    errors_out = dict()
+    errors_vals = inverse_jacobian @ matched_error_rates
+    for i in range(len(error_keys)):
+        errors_out[error_keys[i]] = errors_vals[i]
+
+    for key in errors_out:
+        print(key, ": ", errors_out[key])
+    quit()
+
     from pygsti.io import write_dataset
 
     write_dataset("C:/Users/jkskolf/reimagined-umbrella/problemdataset.txt", ds)
@@ -533,13 +625,13 @@ if __name__ == "__main__":
         idle_string="Gi:0",
     )
 
-    # idt.create_idletomography_report(
-    #    results,
-    #    "../IDTTestReport",
-    #    "Test idle tomography example report",
-    #    auto_open=True,
-    # )
-
+    idt.create_idletomography_report(
+        results,
+        "../IDTTestReport",
+        "Test idle tomography example report",
+        auto_open=True,
+    )
+    quit()
     print(len(results.pauli_fidpairs["samebasis"]))
     print(len(results.pauli_fidpairs["diffbasis"]))
     print(results.pauli_fidpairs["diffbasis"])
@@ -591,12 +683,36 @@ if __name__ == "__main__":
     print("###### | this is the HX error rate which should be 0.01 #")
     print("#########################################################")
     print("#########################################################")
+    error_keys = [
+        "H_X",
+        "H_Y",
+        "H_Z",
+        "S_X",
+        "S_Y",
+        "S_Z",
+        "C_{X,Y}",
+        "C_{X,Z}",
+        "C_{Y,X}",
+        "C_{Y,Z}",
+        "C_{Z,X}",
+        "C_{Z,Y}",
+        "A_{X,Y}",
+        "A_{X,Z}",
+        "A_{Y,X}",
+        "A_{Y,Z}",
+        "A_{Z,X}",
+        "A_{Z,Y}}",
+    ]
+    errors_out = dict()
+    errors_vals = inverse_jacobian @ errors
+    for i in range(len(error_keys)):
+        errors_out[error_keys[i]] = errors_vals[i]
 
+    for key in errors_out:
+        print(key, ": ", errors_out[key])
     # idt.create_idletomography_report(
     #    results,
     #    "../IDTTestReport",
     #    "Test idle tomography example report",
     #    auto_open=True,
     # )
-##### For Corey/Kenny/Robin 5/11:
-##### 1) Help putting together paper draft!  Divide and conquer?  I will definitely work on results/conclusions and some of methodology?
