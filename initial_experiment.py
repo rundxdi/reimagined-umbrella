@@ -460,7 +460,6 @@ if __name__ == "__main__":
     # Temporary Hard Coding Error Gens to 1-, and 2-qubits
 
     hamiltonian_jacobian = build_class_jacobian("H", 1)
-    # hamiltonian_jacobian = 2 * hamiltonian_jacobian
     print(hamiltonian_jacobian)
     stochastic_jacobian = build_class_jacobian("S", 1)
     print(stochastic_jacobian)
