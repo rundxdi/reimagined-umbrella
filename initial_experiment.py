@@ -476,7 +476,7 @@ if __name__ == "__main__":
             anti_symmetric_jacobian,
         ),
     )
-    print(full_jacobian)
+    print("Hey full Jacobian:\n", full_jacobian)
     inverse_jacobian = np.linalg.pinv(full_jacobian)
     print(inverse_jacobian)
 
@@ -535,7 +535,7 @@ if __name__ == "__main__":
                 new_ckt[i] = Label(("Gi", 0))
         updated_ckt_list.append(new_ckt)
     mdl_datagen = pygsti.models.create_crosstalk_free_model(
-        pspec, lindblad_error_coeffs={"Gi": {"SX": 0.01}}
+        pspec, lindblad_error_coeffs={"Gi": {"SX": 0.05}}
     )
     # Error models! Random with right CP constraints from Taxonomy paper
     ds = pygsti.data.simulate_data(
